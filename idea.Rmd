@@ -1,0 +1,72 @@
+---
+title: "Target sequence duplication rate"
+output: html_notebook
+---
+
+
+```{r}
+
+T <- 49e6
+
+is <- 200
+
+is_dist <- rpois(1e6,is)
+sample(is_dist, 1)
+plot(density(is_dist))
+
+1/T
+
+```
+
+ The probability sampling the the same fragments is the product of the fragement size distribution and the size of the target region
+
+## Simplified assumption
+
+Assuming that the fragement size is uniform $F = 200$ the probability sampling an identical fragment from the target region space ($T$)is 
+
+$P(ident) = 1/T
+
+Under the more realistic assumption that the insert size distribution follows a poission distribution
+
+
+```{r, fig.width=4}
+is_dist <- rpois(1e6,is)
+p_sample <- mean(unlist(lapply(sample(is_dist,1e6), function (x) length(which(is_dist == x))/1e6)))
+p_sample
+plot(density(is_dist))
+
+```
+
+Hence, the new probability sampling the same fragment depends on the probability having the identical insert size. 
+
+We need to calculate the probability to sample the same fragment size from the fragment size distribution
+
+$P(frag) = ????$
+
+
+$P(ident) = 1/T*P(frag)$
+
+
+
+```{r}
+p_ident <- 1/T*p_sample
+1/p_ident
+```
+
+
+```{r}
+cov <- num_bases / T
+
+
+target_cov <- seq(0,1000,by=50)
+
+
+#
+num_bases <- target_cov * T
+P_multi_sample <- num_bases*p_ident
+
+
+plot(target_cov, P_multi_sample)
+abline(h = 1, col="red")
+```
+
