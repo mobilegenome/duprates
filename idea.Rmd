@@ -1,24 +1,79 @@
 ---
 title: "Target sequence duplication rate"
-output: html_notebook
+author: "Fritjof Lammers"
+output:
+  html_document:
+    df_print: paged
 ---
 
 
+## Questions
+
+ 1. What is the probability of sampling the same DNA fragment (same length, same position) from a pool of DNA molecules?
+ 2. Given that depth of coverage is uniform across the genome/the targets, at depth of coverage would you re-sample identical DNA fragments?
+
+
+## Ideas
+
+Let's define the target size $T$, from which DNA fragments are generated. 
+
+The fragment size distribution follows a poission distribution with mean $I$. 
+
+The probability of sampling a fragment of size $l_f$ from the distribution is given by the poission distribution `dpois(l_f,I)`.
+
+
 ```{r}
-
 T <- 49e6
+I <- 200
+```
 
-is <- 200
 
-is_dist <- rpois(1e6,is)
-sample(is_dist, 1)
-plot(density(is_dist))
+## Number of DNA fragments sequenced
 
-1/T
+To obtain the target coverage $C$, with a read length of 100 bp ($r$), the number of fragments follows the Lander-Waterman equation. 
+
+$ n_f = C * T / r*2 $
+
+Generate some example fragment counts for $C \in \{50,1000\}$
+
+```{r nf}
+r = 100 # read length
+C = seq(50,1000,50) # list of target coverage
+n_f = C * T / r*2 # fragment count 
+```
+
+## Probability of sampling the fragment of the same length
+
+Sampling a poission distribution with mean $I$ and determine and maximum and minimum length that occurr. 
+
+For each length in this range, store the probability $P(frag = x)$ of sampling in the vector `prop_sampling`.
+
+The probability of sampling a fragmengt of the identical length should be $P(ident,x) = P(frag=x)^2$ 
+
+```{r}
+dist_I <- rpois(1e6,I)
+possible_fragment_lengths <- min(dist_I):max(dist_I)
+prob_sampling <- vector()
+for (i in possible_fragment_lengths) {
+  prob_sampling[i] <- dpois(i, I)
+}
+```
+
+??? For $n_f$ number of fragments, the chance of re-sampling an identical one is thus 
+$P(resample) = \sum{P(ident,x)}$ ???
+
+```{r}
+n_f_test <- 1000
+prob_list <- unlist(lapply(rpois(n_f_test, I),
+       function (x) prob_sampling[x]^2
+       ))
 
 ```
 
- The probability sampling the the same fragments is the product of the fragement size distribution and the size of the target region
+
+
+
+# Scribbles and scratches
 
 ## Simplified assumption
 
@@ -30,9 +85,18 @@ Under the more realistic assumption that the insert size distribution follows a 
 
 
 ```{r, fig.width=4}
-is_dist <- rpois(1e6,is)
-p_sample <- mean(unlist(lapply(sample(is_dist,1e6), function (x) length(which(is_dist == x))/1e6)))
-p_sample
+is <- 200
+num_fragments = c(1e6,1e7,1e8)
+is_dist <- rpois(num_fragments,is)
+range_dist <- min(is_dist):max(is_dist)
+
+p_sample <- unlist(lapply(range_dist, function (x) length(which(is_dist == x))))
+
+p_same <- (p_sample^2)/T
+p_same
+
+
+plot(range_dist, p_sample)
 plot(density(is_dist))
 
 ```
@@ -52,21 +116,3 @@ $P(ident) = 1/T*P(frag)$
 p_ident <- 1/T*p_sample
 1/p_ident
 ```
-
-
-```{r}
-cov <- num_bases / T
-
-
-target_cov <- seq(0,1000,by=50)
-
-
-#
-num_bases <- target_cov * T
-P_multi_sample <- num_bases*p_ident
-
-
-plot(target_cov, P_multi_sample)
-abline(h = 1, col="red")
-```
-
